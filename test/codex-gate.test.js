@@ -68,7 +68,7 @@ test("PreToolUse deny exits 2 with Codex permission denial", async () => {
     hook_event_name: "PreToolUse",
     session_id: "sess-2",
     tool_name: "Bash",
-    tool_input: { command: "sudo chmod 777 /etc/passwd" },
+    tool_input: { command: "disallowed-test-command" },
   }, { decision: "deny", reason: "blocked" });
 
   assert.equal(result.code, 2);
