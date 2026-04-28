@@ -60,7 +60,7 @@ test("PreToolUse allow posts AgentHook envelope", async () => {
   assert.equal(result.seen[0].source, "codex-test");
   assert.equal(result.seen[0].tool_name, "Bash");
   assert.equal(result.seen[0].metadata.publisher, "hookbus-publisher-codex");
-  assert.deepEqual(JSON.parse(result.stdout).hookSpecificOutput.hookEventName, "PreToolUse");
+  assert.deepEqual(JSON.parse(result.stdout), {});
 });
 
 test("PreToolUse deny exits 2 with Codex permission denial", async () => {
@@ -75,6 +75,7 @@ test("PreToolUse deny exits 2 with Codex permission denial", async () => {
   const out = JSON.parse(result.stdout);
   assert.equal(out.hookSpecificOutput.permissionDecision, "deny");
   assert.equal(out.hookSpecificOutput.permissionDecisionReason, "blocked");
+  assert.match(result.stderr, /blocked/);
 });
 
 test("Stop maps to ModelResponse with reasoning unavailable metadata", async () => {

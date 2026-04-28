@@ -92,16 +92,38 @@ if path.exists() and path.read_text(encoding="utf-8").strip():
 if not isinstance(data, dict):
     raise SystemExit("hooks.json root must be an object")
 
+root = data.setdefault("hooks", {})
+if not isinstance(root, dict):
+    raise SystemExit("hooks.json hooks field must be an object")
+
 for event in events:
-    entries = data.get(event)
+    entries = root.get(event)
     if not isinstance(entries, list):
         entries = []
     kept = [
-        entry for entry in entries
-        if not (isinstance(entry, dict) and "codex-gate" in str(entry.get("command", "")))
+        group for group in entries
+        if not (
+            isinstance(group, dict)
+            and any(
+                isinstance(handler, dict) and "codex-gate" in str(handler.get("command", ""))
+                for handler in group.get("hooks", [])
+            )
+        )
     ]
-    kept.append({"command": command})
-    data[event] = kept
+    group = {
+        "hooks": [{
+            "type": "command",
+            "command": command,
+            "timeout": 30,
+            "statusMessage": f"HookBus {event}",
+        }],
+    }
+    if event in {"PreToolUse", "PostToolUse"}:
+        group["matcher"] = "Bash"
+    elif event == "SessionStart":
+        group["matcher"] = "startup|resume"
+    kept.append(group)
+    root[event] = kept
 
 path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 PY

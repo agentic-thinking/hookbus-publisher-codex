@@ -171,6 +171,7 @@ function neutralFor(hook) {
 
 function emitDeny(hook, reason) {
   if (hook === "PreToolUse") {
+    if (reason) process.stderr.write(`${reason}\n`);
     emit({
       hookSpecificOutput: {
         hookEventName: "PreToolUse",
@@ -191,20 +192,18 @@ function emitDeny(hook, reason) {
 
 function emitAsk(hook, reason) {
   if (hook === "PreToolUse") {
-    emit({
-      hookSpecificOutput: {
-        hookEventName: "PreToolUse",
-        permissionDecision: "ask",
-        additionalContext: reason,
-      },
-    });
+    emitDeny(hook, `Approval required: ${reason}`);
     return;
   }
   emit(neutralFor(hook));
 }
 
 function emitAllow(hook, reason) {
-  if (reason && ["PreToolUse", "PostToolUse", "UserPromptSubmit"].includes(hook)) {
+  if (hook === "PreToolUse") {
+    emit({});
+    return;
+  }
+  if (reason && ["PostToolUse", "UserPromptSubmit"].includes(hook)) {
     emit({
       hookSpecificOutput: {
         hookEventName: hook,

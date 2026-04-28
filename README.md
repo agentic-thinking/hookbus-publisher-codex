@@ -6,7 +6,7 @@ Codex fires hooks when a session starts, a user submits a prompt, a tool is abou
 
 ## What it does
 
-- Registers Codex CLI hooks in `~/.codex/hooks.json`
+- Registers Codex CLI hooks in `~/.codex/hooks.json` using Codex's `{"hooks": ...}` schema
 - Enables Codex's `codex_hooks` feature in `~/.codex/config.toml`
 - Installs a `codex-gate` command that reads Codex hook JSON from stdin
 - Posts AgentHook-shaped lifecycle envelopes to HookBus
@@ -69,21 +69,46 @@ Write `~/.codex/hooks.json`:
 
 ```json
 {
-  "SessionStart": [
-    { "command": "env HOOKBUS_SOURCE=codex codex-gate" }
-  ],
-  "UserPromptSubmit": [
-    { "command": "env HOOKBUS_SOURCE=codex codex-gate" }
-  ],
-  "PreToolUse": [
-    { "command": "env HOOKBUS_SOURCE=codex codex-gate" }
-  ],
-  "PostToolUse": [
-    { "command": "env HOOKBUS_SOURCE=codex codex-gate" }
-  ],
-  "Stop": [
-    { "command": "env HOOKBUS_SOURCE=codex codex-gate" }
-  ]
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          { "type": "command", "command": "env HOOKBUS_SOURCE=codex codex-gate", "timeout": 30 }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "env HOOKBUS_SOURCE=codex codex-gate", "timeout": 30 }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "env HOOKBUS_SOURCE=codex codex-gate", "timeout": 30 }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "env HOOKBUS_SOURCE=codex codex-gate", "timeout": 30 }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "env HOOKBUS_SOURCE=codex codex-gate", "timeout": 30 }
+        ]
+      }
+    ]
+  }
 }
 ```
 
@@ -98,6 +123,8 @@ export HOOKBUS_FAIL_MODE=closed
 ```
 
 In fail-closed mode, unreachable HookBus blocks `PreToolUse` events. Observational events still return a neutral response so the CLI is not disrupted after an action has already completed.
+
+Codex currently rejects `permissionDecision: "allow"` and `permissionDecision: "ask"` from `PreToolUse` hook output. This publisher returns `{}` on allow. If HookBus returns `ask`, the publisher blocks the tool and reports the approval request as a denial reason so the user can approve through the configured workflow.
 
 ## Test
 
