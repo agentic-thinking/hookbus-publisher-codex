@@ -45,7 +45,7 @@ Codex does not currently expose a dedicated raw `PreLLMCall` / `PostLLMCall` hoo
 
 ## AgentHook publisher manifest
 
-This repository ships [`agenthook.publisher.json`](./agenthook.publisher.json), a draft AgentHook publisher manifest. It declares the stable publisher ID, runtime, supported lifecycle events, limitations, config files, and verification commands in one machine-readable file.
+This repository ships [`agenthook.publisher.json`](./agenthook.publisher.json), an interim AgentHook publisher manifest for today's non-standard hook surfaces. It declares the stable publisher ID, runtime, supported lifecycle events, limitations, config files, and verification commands in one machine-readable file ahead of native AgentHook adoption.
 
 HookBus and other collectors can use the manifest to show publisher onboarding state and hook coverage, but they should still verify live events before reporting a publisher as active.
 
