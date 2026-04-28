@@ -1,0 +1,30 @@
+{
+  "name": "@agenticthinking/hookbus-publisher-codex",
+  "version": "0.1.0",
+  "description": "OpenAI Codex CLI publisher for HookBus runtime evidence",
+  "type": "module",
+  "bin": {
+    "codex-gate": "bin/codex-gate.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "hookbus",
+    "agenthook",
+    "codex",
+    "openai",
+    "ai-agents",
+    "governance"
+  ],
+  "author": "Agentic Thinking Limited <contact@agenticthinking.uk>",
+  "license": "MIT",
+  "homepage": "https://agenticthinking.uk",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agentic-thinking/hookbus-publisher-codex.git"
+  }
+}
