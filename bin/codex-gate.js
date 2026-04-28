@@ -122,8 +122,8 @@ function buildEnvelope(input) {
   };
 }
 
-function postEvent(envelope, { tokenOverride = undefined } = {}) {
-  const busUrl = env("HOOKBUS_URL", "http://localhost:18800/event");
+function postEvent(envelope, { busUrlOverride = undefined, tokenOverride = undefined } = {}) {
+  const busUrl = busUrlOverride === undefined ? env("HOOKBUS_URL", "http://localhost:18800/event") : String(busUrlOverride);
   const timeoutMs = Number.parseInt(env("HOOKBUS_TIMEOUT", "30"), 10) * 1000;
   const token = tokenOverride === undefined ? env("HOOKBUS_TOKEN", "").trim() : String(tokenOverride || "").trim();
 
@@ -217,10 +217,59 @@ function hooksJsonStatus(hooksText) {
   return { ok: true, detail: "HookBus handlers installed" };
 }
 
+function shellUnquote(value) {
+  if (!value) return "";
+  if (value.startsWith("'") && value.endsWith("'")) {
+    return value.slice(1, -1).replace(/'\\''/g, "'");
+  }
+  if (value.startsWith('"') && value.endsWith('"')) {
+    return value.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+  }
+  return value.replace(/\\(.)/g, "$1");
+}
+
+function extractInstalledHookEnv(hooksText) {
+  const result = {};
+  if (!hooksText.trim()) return result;
+  let data;
+  try {
+    data = JSON.parse(hooksText);
+  } catch {
+    return result;
+  }
+  const root = data && typeof data === "object" ? data.hooks : null;
+  if (!root || typeof root !== "object") return result;
+
+  for (const groups of Object.values(root)) {
+    if (!Array.isArray(groups)) continue;
+    for (const group of groups) {
+      const handlers = group && Array.isArray(group.hooks) ? group.hooks : [];
+      for (const handler of handlers) {
+        const command = handler && typeof handler.command === "string" ? handler.command : "";
+        if (!command.includes("codex-gate")) continue;
+        for (const key of ["HOOKBUS_URL", "HOOKBUS_TOKEN", "HOOKBUS_SOURCE", "HOOKBUS_FAIL_MODE", "HOOKBUS_INSTANCE_ID"]) {
+          const match = command.match(new RegExp(`(?:^|\\s)${key}=((?:'[^']*(?:'\\\\''[^']*)*')|(?:\"(?:\\\\.|[^\"])*\")|(?:\\\\.|\\S)+)`));
+          if (match) result[key] = shellUnquote(match[1]);
+        }
+        return result;
+      }
+    }
+  }
+  return result;
+}
+
 async function doctor() {
+  info("Codex HookBus doctor");
+  info("This validates the installed gate, Codex hook files, and HookBus event path.");
+  info("It cannot prove that an already-running Codex TUI has reloaded hooks; restart Codex after install.\n");
+
   const codeHome = env("CODEX_HOME", join(env("HOME", ""), ".codex"));
   const configPath = join(codeHome, "config.toml");
   const hooksPath = join(codeHome, "hooks.json");
+  const hooksText = readText(hooksPath);
+  const installedEnv = extractInstalledHookEnv(hooksText);
+  const doctorBusUrl = installedEnv.HOOKBUS_URL || env("HOOKBUS_URL", "http://localhost:18800/event");
+  const doctorToken = installedEnv.HOOKBUS_TOKEN !== undefined ? installedEnv.HOOKBUS_TOKEN : env("HOOKBUS_TOKEN", "").trim();
   const checks = [];
 
   function check(name, ok, detail = "") {
@@ -230,16 +279,19 @@ async function doctor() {
 
   let urlOk = true;
   try {
-    new URL(env("HOOKBUS_URL", "http://localhost:18800/event"));
+    new URL(doctorBusUrl);
   } catch (error) {
     urlOk = false;
     check("HOOKBUS_URL", false, error.message);
   }
-  if (urlOk) check("HOOKBUS_URL", true, env("HOOKBUS_URL", "http://localhost:18800/event"));
+  if (urlOk) check("HOOKBUS_URL", true, doctorBusUrl);
+  if (installedEnv.HOOKBUS_URL && env("HOOKBUS_URL", "") && installedEnv.HOOKBUS_URL !== env("HOOKBUS_URL", "")) {
+    info(`warn shell HOOKBUS_URL differs from installed hook URL; doctor is testing installed hook URL.`);
+  }
 
   check("codex-gate", existsSync(process.argv[1]), process.argv[1]);
   check("codex config", hasCodexHooksEnabled(readText(configPath)), configPath);
-  const hooksStatus = hooksJsonStatus(readText(hooksPath));
+  const hooksStatus = hooksJsonStatus(hooksText);
   check("codex hooks", hooksStatus.ok, `${hooksPath}: ${hooksStatus.detail}`);
 
   try {
@@ -249,7 +301,7 @@ async function doctor() {
       prompt: "hookbus doctor test",
       cwd: process.cwd(),
     });
-    const verdict = await postEvent(envelope);
+    const verdict = await postEvent(envelope, { busUrlOverride: doctorBusUrl, tokenOverride: doctorToken });
     check("hookbus event", true, `accepted with decision=${verdict.decision || "allow"}`);
   } catch (error) {
     check("hookbus event", false, error.message);

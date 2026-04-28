@@ -46,6 +46,8 @@ cd hookbus-publisher-codex
 
 The installer copies `codex-gate` to `~/.local/bin/codex-gate`, enables Codex hooks in `~/.codex/config.toml`, and writes HookBus commands into `~/.codex/hooks.json`.
 
+The installer prints the exact HookBus URL it wrote into the Codex hook file. If it detects multiple local HookBus endpoints, it warns you; make sure you open the dashboard for the same bus.
+
 If `~/.local/bin` is not on your `PATH`, Codex hooks still work because the installer writes an absolute command path. Add it to `PATH` only if you want to run `codex-gate` manually:
 
 ```bash
@@ -72,7 +74,7 @@ Run the doctor:
 
 The doctor checks that Codex hooks are enabled, `~/.codex/hooks.json` contains HookBus handlers, the bus URL is valid, and a harmless test event is accepted by HookBus.
 
-Restart Codex after installation so it reloads `~/.codex/config.toml` and `~/.codex/hooks.json`.
+Fully quit and restart Codex after installation so it reloads `~/.codex/config.toml` and `~/.codex/hooks.json`. Already-running Codex sessions do not reload hook changes.
 
 ## Codex hook coverage
 

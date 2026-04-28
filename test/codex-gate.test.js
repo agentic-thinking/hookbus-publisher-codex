@@ -233,5 +233,6 @@ test("doctor validates config, hooks, and bus event path", async () => {
 
   assert.equal(result.code, 0);
   assert.match(result.stdout, /Doctor passed/);
+  assert.match(result.stdout, /already-running Codex TUI/);
   assert.doesNotMatch(result.stdout, /doctor-token/);
 });

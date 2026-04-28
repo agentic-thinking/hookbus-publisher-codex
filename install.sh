@@ -13,6 +13,39 @@ say() { printf "\033[1;32m[codex-publisher]\033[0m %s\n" "$*"; }
 warn() { printf "\033[1;33m[codex-publisher]\033[0m %s\n" "$*"; }
 die() { printf "\033[1;31m[codex-publisher] error:\033[0m %s\n" "$*"; exit 1; }
 
+detect_local_hookbus_endpoints() {
+  python3 <<'PY'
+import http.client
+import json
+from urllib.parse import urlparse
+
+for port in (18800, 18811):
+    try:
+        conn = http.client.HTTPConnection("127.0.0.1", port, timeout=0.8)
+        conn.request(
+            "POST",
+            "/event",
+            body=json.dumps({
+                "event_id": f"installer-probe-{port}",
+                "event_type": "UserPromptSubmit",
+                "timestamp": "2026-01-01T00:00:00Z",
+                "source": "codex-installer-probe",
+                "session_id": "installer-probe",
+                "tool_name": "",
+                "tool_input": {},
+                "metadata": {"probe": True},
+            }),
+            headers={"Content-Type": "application/json"},
+        )
+        res = conn.getresponse()
+        res.read()
+        if res.status in (200, 400, 401, 403):
+            print(f"http://localhost:{port}/event {res.status}")
+    except Exception:
+        pass
+PY
+}
+
 [ -f "$SRC" ] || die "missing $SRC"
 command -v node >/dev/null || die "node is required"
 
@@ -48,6 +81,16 @@ for name in HOOKBUS_USER_ID HOOKBUS_ACCOUNT_ID HOOKBUS_INSTANCE_ID HOOKBUS_HOST_
   fi
 done
 HOOK_CMD="$HOOK_CMD $(shell_quote "$DST")"
+
+mapfile -t LOCAL_BUSES < <(detect_local_hookbus_endpoints || true)
+if [ "${#LOCAL_BUSES[@]}" -gt 1 ]; then
+  warn "multiple local HookBus-like endpoints were detected:"
+  for endpoint in "${LOCAL_BUSES[@]}"; do
+    warn "  $endpoint"
+  done
+  warn "this Codex publisher is being installed for: $BUS_URL"
+  warn "make sure you open the dashboard for the same bus."
+fi
 
 if [ -f "$CONFIG" ]; then
   cp "$CONFIG" "$CONFIG.bak.hookbus-$(date +%Y%m%d-%H%M%S)"
@@ -156,7 +199,16 @@ cat <<EOF
 
 Codex HookBus publisher installed.
 
-Restart Codex so config and hooks are reloaded.
+Installed bus:
+  $BUS_URL
+
+Installed files:
+  gate:   $DST
+  config: $CONFIG
+  hooks:  $HOOKS
+
+Important: fully quit and restart Codex. Already-running Codex sessions do not reload hooks.
+
 Run a verification check:
 
   $DST --doctor
