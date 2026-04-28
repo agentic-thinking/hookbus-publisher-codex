@@ -43,6 +43,12 @@ export HOOKBUS_TOKEN=<your-hookbus-token>
 
 Codex does not currently expose a dedicated raw `PreLLMCall` / `PostLLMCall` hook surface to this publisher. The `Stop` hook is mapped to AgentHook `ModelResponse` and includes response metadata when Codex supplies it. Reasoning content is marked unavailable unless a future Codex hook payload exposes it.
 
+## AgentHook publisher manifest
+
+This repository ships [`agenthook.publisher.json`](./agenthook.publisher.json), a draft AgentHook publisher manifest. It declares the stable publisher ID, runtime, supported lifecycle events, limitations, config files, and verification commands in one machine-readable file.
+
+HookBus and other collectors can use the manifest to show publisher onboarding state and hook coverage, but they should still verify live events before reporting a publisher as active.
+
 ## Environment variables
 
 | Var | Default | Purpose |
