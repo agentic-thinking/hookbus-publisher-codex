@@ -42,6 +42,17 @@ function truncate(value, max = 4000) {
   return text.length > max ? `${text.slice(0, max)}...[truncated]` : text;
 }
 
+function optionalIdentityMetadata() {
+  const fields = {
+    publisher_id: env("HOOKBUS_PUBLISHER_ID", "uk.agenticthinking.publisher.openai.codex-cli"),
+    user_id: env("HOOKBUS_USER_ID"),
+    account_id: env("HOOKBUS_ACCOUNT_ID"),
+    instance_id: env("HOOKBUS_INSTANCE_ID"),
+    host_id: env("HOOKBUS_HOST_ID"),
+  };
+  return Object.fromEntries(Object.entries(fields).filter(([, value]) => value));
+}
+
 function hookName(input) {
   return input.hook_event_name || input.hookEventName || input.event || "";
 }
@@ -85,6 +96,7 @@ function buildEnvelope(input) {
     codex_hook_event: hook || "unknown",
     cwd: input.cwd || process.cwd(),
     model: input.model || "",
+    ...optionalIdentityMetadata(),
   };
 
   if (eventType === "ModelResponse") {

@@ -28,6 +28,7 @@ Set your HookBus endpoint and token before installing if you want them written i
 ```bash
 export HOOKBUS_URL=http://localhost:18800/event
 export HOOKBUS_TOKEN=<your-hookbus-token>
+export HOOKBUS_INSTANCE_ID=runtime-instance-01
 ./install.sh
 ```
 
@@ -58,10 +59,17 @@ HookBus and other collectors can use the manifest to show publisher onboarding s
 | `HOOKBUS_SOURCE` | `codex` | Dashboard source label |
 | `HOOKBUS_TIMEOUT` | `30` | HTTP timeout in seconds |
 | `HOOKBUS_FAIL_MODE` | `open` | `open` allows on bus failure; `closed` denies `PreToolUse` on bus failure |
+| `HOOKBUS_PUBLISHER_ID` | `uk.agenticthinking.publisher.openai.codex-cli` | Stable publisher type identifier |
+| `HOOKBUS_USER_ID` | empty | Optional user or pseudonymous user reference for shared buses |
+| `HOOKBUS_ACCOUNT_ID` | empty | Optional runtime/provider account reference |
+| `HOOKBUS_INSTANCE_ID` | empty | Optional local publisher/runtime instance ID |
+| `HOOKBUS_HOST_ID` | empty | Optional pseudonymous host, container, or workload ID |
 | `HOOKBUS_DEBUG` | empty | Set to `1` for diagnostic logs on stderr |
 | `HOOKBUS_SURFACE_ALLOW_CONTEXT` | empty | Set to `1` to show HookBus allow reasons inside Codex. Default is quiet. |
 
 Do not export `HOOKBUS_SOURCE` globally on shared hosts. Keep it pinned inline per hook command so different publishers are labelled correctly.
+
+For a central HookBus shared by multiple users or machines, set at least `HOOKBUS_INSTANCE_ID` before installing. Use pseudonymous IDs; do not put raw personal data, passwords, tokens, private IPs, or credentials in identity fields. Pseudonymous IDs are still attributable operational metadata and should follow your retention and access-control policy.
 
 ## Manual configuration
 

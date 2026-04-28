@@ -29,6 +29,9 @@ function runGate(input, { decision = "allow", reason = "ok" } = {}) {
           HOOKBUS_URL: url,
           HOOKBUS_TOKEN: "test-token",
           HOOKBUS_SOURCE: "codex-test",
+          HOOKBUS_USER_ID: "user-123",
+          HOOKBUS_INSTANCE_ID: "runtime-instance-01",
+          HOOKBUS_HOST_ID: "host-01",
         },
         stdio: ["pipe", "pipe", "pipe"],
       });
@@ -60,6 +63,10 @@ test("PreToolUse allow posts AgentHook envelope", async () => {
   assert.equal(result.seen[0].source, "codex-test");
   assert.equal(result.seen[0].tool_name, "Bash");
   assert.equal(result.seen[0].metadata.publisher, "hookbus-publisher-codex");
+  assert.equal(result.seen[0].metadata.publisher_id, "uk.agenticthinking.publisher.openai.codex-cli");
+  assert.equal(result.seen[0].metadata.user_id, "user-123");
+  assert.equal(result.seen[0].metadata.instance_id, "runtime-instance-01");
+  assert.equal(result.seen[0].metadata.host_id, "host-01");
   assert.deepEqual(JSON.parse(result.stdout), {});
 });
 

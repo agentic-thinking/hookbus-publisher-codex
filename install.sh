@@ -28,7 +28,15 @@ esac
 BUS_URL="${HOOKBUS_URL:-http://localhost:18800/event}"
 TOKEN="${HOOKBUS_TOKEN:-YOUR_TOKEN_HERE}"
 FAIL_MODE="${HOOKBUS_FAIL_MODE:-open}"
-HOOK_CMD="env HOOKBUS_URL=$BUS_URL HOOKBUS_TOKEN=$TOKEN HOOKBUS_SOURCE=codex HOOKBUS_FAIL_MODE=$FAIL_MODE $DST"
+PUBLISHER_ID="${HOOKBUS_PUBLISHER_ID:-uk.agenticthinking.publisher.openai.codex-cli}"
+HOOK_CMD="env HOOKBUS_URL=$BUS_URL HOOKBUS_TOKEN=$TOKEN HOOKBUS_SOURCE=codex HOOKBUS_FAIL_MODE=$FAIL_MODE HOOKBUS_PUBLISHER_ID=$PUBLISHER_ID"
+for name in HOOKBUS_USER_ID HOOKBUS_ACCOUNT_ID HOOKBUS_INSTANCE_ID HOOKBUS_HOST_ID; do
+  value="${!name:-}"
+  if [ -n "$value" ]; then
+    HOOK_CMD="$HOOK_CMD $name=$value"
+  fi
+done
+HOOK_CMD="$HOOK_CMD $DST"
 
 if [ -f "$CONFIG" ]; then
   cp "$CONFIG" "$CONFIG.bak.hookbus-$(date +%Y%m%d-%H%M%S)"
