@@ -92,4 +92,17 @@ test("Stop maps to ModelResponse with reasoning unavailable metadata", async () 
   assert.equal(result.seen[0].metadata.response_available, true);
   assert.equal(result.seen[0].metadata.response_text, "done");
   assert.equal(result.seen[0].metadata.reasoning_available, false);
+  assert.deepEqual(JSON.parse(result.stdout), {});
+});
+
+test("UserPromptSubmit allow reason is quiet by default", async () => {
+  const result = await runGate({
+    hook_event_name: "UserPromptSubmit",
+    session_id: "sess-4",
+    prompt: "hello",
+  }, { decision: "allow", reason: "not gated" });
+
+  assert.equal(result.code, 0);
+  assert.equal(result.seen[0].event_type, "UserPromptSubmit");
+  assert.deepEqual(JSON.parse(result.stdout), {});
 });

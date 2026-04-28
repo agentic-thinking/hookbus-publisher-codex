@@ -203,7 +203,7 @@ function emitAllow(hook, reason) {
     emit({});
     return;
   }
-  if (reason && ["PostToolUse", "UserPromptSubmit"].includes(hook)) {
+  if (process.env.HOOKBUS_SURFACE_ALLOW_CONTEXT === "1" && reason && ["PostToolUse", "UserPromptSubmit"].includes(hook)) {
     emit({
       hookSpecificOutput: {
         hookEventName: hook,
@@ -212,7 +212,7 @@ function emitAllow(hook, reason) {
     });
     return;
   }
-  if (reason && ["SessionStart", "Stop"].includes(hook)) {
+  if (process.env.HOOKBUS_SURFACE_ALLOW_CONTEXT === "1" && reason && ["SessionStart", "Stop"].includes(hook)) {
     emit({ systemMessage: reason });
     return;
   }

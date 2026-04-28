@@ -53,6 +53,7 @@ Codex does not currently expose a dedicated raw `PreLLMCall` / `PostLLMCall` hoo
 | `HOOKBUS_TIMEOUT` | `30` | HTTP timeout in seconds |
 | `HOOKBUS_FAIL_MODE` | `open` | `open` allows on bus failure; `closed` denies `PreToolUse` on bus failure |
 | `HOOKBUS_DEBUG` | empty | Set to `1` for diagnostic logs on stderr |
+| `HOOKBUS_SURFACE_ALLOW_CONTEXT` | empty | Set to `1` to show HookBus allow reasons inside Codex. Default is quiet. |
 
 Do not export `HOOKBUS_SOURCE` globally on shared hosts. Keep it pinned inline per hook command so different publishers are labelled correctly.
 
@@ -125,6 +126,8 @@ export HOOKBUS_FAIL_MODE=closed
 In fail-closed mode, unreachable HookBus blocks `PreToolUse` events. Observational events still return a neutral response so the CLI is not disrupted after an action has already completed.
 
 Codex currently rejects `permissionDecision: "allow"` and `permissionDecision: "ask"` from `PreToolUse` hook output. This publisher returns `{}` on allow. If HookBus returns `ask`, the publisher blocks the tool and reports the approval request as a denial reason so the user can approve through the configured workflow.
+
+Allow verdict reasons are not surfaced into the Codex session by default. This keeps harmless subscriber messages such as "not gated" or "No subscribers matched" out of the conversation. Set `HOOKBUS_SURFACE_ALLOW_CONTEXT=1` only when debugging context injection.
 
 ## Test
 
