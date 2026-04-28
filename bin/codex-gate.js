@@ -3,6 +3,8 @@ import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { randomUUID } from "node:crypto";
 import { hostname } from "node:os";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 const VERSION = "0.1.0";
 
@@ -14,6 +16,10 @@ function debug(message) {
   if (process.env.HOOKBUS_DEBUG === "1") {
     process.stderr.write(`[hookbus-codex] ${message}\n`);
   }
+}
+
+function info(message) {
+  process.stdout.write(`${message}\n`);
 }
 
 function readStdin() {
@@ -116,10 +122,10 @@ function buildEnvelope(input) {
   };
 }
 
-function postEvent(envelope) {
+function postEvent(envelope, { tokenOverride = undefined } = {}) {
   const busUrl = env("HOOKBUS_URL", "http://localhost:18800/event");
   const timeoutMs = Number.parseInt(env("HOOKBUS_TIMEOUT", "30"), 10) * 1000;
-  const token = env("HOOKBUS_TOKEN", "").trim();
+  const token = tokenOverride === undefined ? env("HOOKBUS_TOKEN", "").trim() : String(tokenOverride || "").trim();
 
   return new Promise((resolve, reject) => {
     let url;
@@ -150,6 +156,10 @@ function postEvent(envelope) {
       res.setEncoding("utf8");
       res.on("data", (chunk) => { data += chunk; });
       res.on("end", () => {
+        if (res.statusCode && res.statusCode >= 400) {
+          reject(new Error(`HookBus returned HTTP ${res.statusCode}${data ? `: ${truncate(data, 240)}` : ""}`));
+          return;
+        }
         try {
           const parsed = data ? JSON.parse(data) : {};
           resolve({
@@ -170,6 +180,88 @@ function postEvent(envelope) {
     req.write(body);
     req.end();
   });
+}
+
+function readText(path) {
+  try {
+    return readFileSync(path, "utf8");
+  } catch {
+    return "";
+  }
+}
+
+function hasCodexHooksEnabled(configText) {
+  return /^\s*codex_hooks\s*=\s*true\s*$/m.test(configText);
+}
+
+function hooksJsonStatus(hooksText) {
+  if (!hooksText.trim()) return { ok: false, detail: "missing or empty hooks.json" };
+  let data;
+  try {
+    data = JSON.parse(hooksText);
+  } catch (error) {
+    return { ok: false, detail: `invalid JSON: ${error.message}` };
+  }
+  const root = data && typeof data === "object" ? data.hooks : null;
+  if (!root || typeof root !== "object") return { ok: false, detail: "missing hooks root" };
+  const required = ["SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop"];
+  const missing = required.filter((event) => {
+    const groups = root[event];
+    return !Array.isArray(groups) || !groups.some((group) => (
+      group && Array.isArray(group.hooks) && group.hooks.some((handler) => (
+        handler && typeof handler.command === "string" && handler.command.includes("codex-gate")
+      ))
+    ));
+  });
+  if (missing.length) return { ok: false, detail: `missing HookBus handlers for: ${missing.join(", ")}` };
+  return { ok: true, detail: "HookBus handlers installed" };
+}
+
+async function doctor() {
+  const codeHome = env("CODEX_HOME", join(env("HOME", ""), ".codex"));
+  const configPath = join(codeHome, "config.toml");
+  const hooksPath = join(codeHome, "hooks.json");
+  const checks = [];
+
+  function check(name, ok, detail = "") {
+    checks.push({ name, ok, detail });
+    info(`${ok ? "ok" : "fail"} ${name}${detail ? ` - ${detail}` : ""}`);
+  }
+
+  let urlOk = true;
+  try {
+    new URL(env("HOOKBUS_URL", "http://localhost:18800/event"));
+  } catch (error) {
+    urlOk = false;
+    check("HOOKBUS_URL", false, error.message);
+  }
+  if (urlOk) check("HOOKBUS_URL", true, env("HOOKBUS_URL", "http://localhost:18800/event"));
+
+  check("codex-gate", existsSync(process.argv[1]), process.argv[1]);
+  check("codex config", hasCodexHooksEnabled(readText(configPath)), configPath);
+  const hooksStatus = hooksJsonStatus(readText(hooksPath));
+  check("codex hooks", hooksStatus.ok, `${hooksPath}: ${hooksStatus.detail}`);
+
+  try {
+    const envelope = buildEnvelope({
+      hook_event_name: "UserPromptSubmit",
+      session_id: `codex-doctor-${Date.now()}`,
+      prompt: "hookbus doctor test",
+      cwd: process.cwd(),
+    });
+    const verdict = await postEvent(envelope);
+    check("hookbus event", true, `accepted with decision=${verdict.decision || "allow"}`);
+  } catch (error) {
+    check("hookbus event", false, error.message);
+  }
+
+  const failed = checks.filter((entry) => !entry.ok);
+  if (failed.length) {
+    info(`\nDoctor failed: ${failed.length} check(s) failed.`);
+    return 1;
+  }
+  info("\nDoctor passed.");
+  return 0;
 }
 
 function emit(payload) {
@@ -263,7 +355,8 @@ export async function main() {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main()
+  const entry = process.argv.includes("--doctor") ? doctor : main;
+  entry()
     .then((code) => process.exit(typeof code === "number" ? code : 0))
     .catch((error) => {
       process.stderr.write(`[hookbus-codex] crashed: ${error.message}\n`);

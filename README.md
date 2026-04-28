@@ -15,22 +15,64 @@ Codex fires hooks when a session starts, a user submits a prompt, a tool is abou
 
 ## Install
 
+### 1. Install HookBus or get access to a central HookBus
+
+For a local development bus, install HookBus Light first and load its environment:
+
+```bash
+curl -fsSL https://hookbus.com/install.sh | bash
+source ~/hookbus-light/.env
+export HOOKBUS_URL=http://localhost:18800/event
+```
+
+For a shared or central HookBus, ask your HookBus operator for:
+
+```bash
+export HOOKBUS_URL=https://hookbus.example.com/event
+export HOOKBUS_TOKEN=<hookbus-bearer-token>
+export HOOKBUS_INSTANCE_ID=runtime-instance-01
+export HOOKBUS_HOST_ID=host-01
+```
+
+Use pseudonymous identity values. Do not put personal data, passwords, private addresses, or credentials in identity fields.
+
+### 2. Install the Codex publisher
+
 ```bash
 git clone https://github.com/agentic-thinking/hookbus-publisher-codex
 cd hookbus-publisher-codex
 ./install.sh
 ```
 
-The installer copies `codex-gate` to `~/.local/bin/`, enables Codex hooks, and writes `~/.codex/hooks.json`.
+The installer copies `codex-gate` to `~/.local/bin/codex-gate`, enables Codex hooks in `~/.codex/config.toml`, and writes HookBus commands into `~/.codex/hooks.json`.
 
-Set your HookBus endpoint and token before installing if you want them written into the hook commands:
+If `~/.local/bin` is not on your `PATH`, Codex hooks still work because the installer writes an absolute command path. Add it to `PATH` only if you want to run `codex-gate` manually:
 
 ```bash
-export HOOKBUS_URL=http://localhost:18800/event
-export HOOKBUS_TOKEN=<your-hookbus-token>
-export HOOKBUS_INSTANCE_ID=runtime-instance-01
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+### 3. Avoid stale config
+
+The HookBus URL, token, fail mode, and identity fields are written into `~/.codex/hooks.json` during install. If any of these change, rerun:
+
+```bash
 ./install.sh
 ```
+
+Do not rely on changing shell exports after installation; Codex will keep using the inline values already written to the hook file.
+
+### 4. Verify the install
+
+Run the doctor:
+
+```bash
+~/.local/bin/codex-gate --doctor
+```
+
+The doctor checks that Codex hooks are enabled, `~/.codex/hooks.json` contains HookBus handlers, the bus URL is valid, and a harmless test event is accepted by HookBus.
+
+Restart Codex after installation so it reloads `~/.codex/config.toml` and `~/.codex/hooks.json`.
 
 ## Codex hook coverage
 
@@ -89,14 +131,14 @@ Write `~/.codex/hooks.json`:
       {
         "matcher": "startup|resume",
         "hooks": [
-          { "type": "command", "command": "env HOOKBUS_SOURCE=codex codex-gate", "timeout": 30 }
+          { "type": "command", "command": "env HOOKBUS_URL=http://localhost:18800/event HOOKBUS_SOURCE=codex /home/you/.local/bin/codex-gate", "timeout": 30 }
         ]
       }
     ],
     "UserPromptSubmit": [
       {
         "hooks": [
-          { "type": "command", "command": "env HOOKBUS_SOURCE=codex codex-gate", "timeout": 30 }
+          { "type": "command", "command": "env HOOKBUS_URL=http://localhost:18800/event HOOKBUS_SOURCE=codex /home/you/.local/bin/codex-gate", "timeout": 30 }
         ]
       }
     ],
@@ -104,7 +146,7 @@ Write `~/.codex/hooks.json`:
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "env HOOKBUS_SOURCE=codex codex-gate", "timeout": 30 }
+          { "type": "command", "command": "env HOOKBUS_URL=http://localhost:18800/event HOOKBUS_SOURCE=codex /home/you/.local/bin/codex-gate", "timeout": 30 }
         ]
       }
     ],
@@ -112,14 +154,14 @@ Write `~/.codex/hooks.json`:
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "env HOOKBUS_SOURCE=codex codex-gate", "timeout": 30 }
+          { "type": "command", "command": "env HOOKBUS_URL=http://localhost:18800/event HOOKBUS_SOURCE=codex /home/you/.local/bin/codex-gate", "timeout": 30 }
         ]
       }
     ],
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "env HOOKBUS_SOURCE=codex codex-gate", "timeout": 30 }
+          { "type": "command", "command": "env HOOKBUS_URL=http://localhost:18800/event HOOKBUS_SOURCE=codex /home/you/.local/bin/codex-gate", "timeout": 30 }
         ]
       }
     ]

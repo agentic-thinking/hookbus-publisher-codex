@@ -26,17 +26,28 @@ case ":$PATH:" in
 esac
 
 BUS_URL="${HOOKBUS_URL:-http://localhost:18800/event}"
-TOKEN="${HOOKBUS_TOKEN:-YOUR_TOKEN_HERE}"
+TOKEN="${HOOKBUS_TOKEN:-}"
 FAIL_MODE="${HOOKBUS_FAIL_MODE:-open}"
 PUBLISHER_ID="${HOOKBUS_PUBLISHER_ID:-uk.agenticthinking.publisher.openai.codex-cli}"
-HOOK_CMD="env HOOKBUS_URL=$BUS_URL HOOKBUS_TOKEN=$TOKEN HOOKBUS_SOURCE=codex HOOKBUS_FAIL_MODE=$FAIL_MODE HOOKBUS_PUBLISHER_ID=$PUBLISHER_ID"
+
+shell_quote() {
+  printf "%q" "$1"
+}
+
+HOOK_CMD="env HOOKBUS_URL=$(shell_quote "$BUS_URL")"
+if [ -n "$TOKEN" ]; then
+  HOOK_CMD="$HOOK_CMD HOOKBUS_TOKEN=$(shell_quote "$TOKEN")"
+else
+  warn "HOOKBUS_TOKEN is not set. The hook command will omit auth; authenticated buses will reject events."
+fi
+HOOK_CMD="$HOOK_CMD HOOKBUS_SOURCE=codex HOOKBUS_FAIL_MODE=$(shell_quote "$FAIL_MODE") HOOKBUS_PUBLISHER_ID=$(shell_quote "$PUBLISHER_ID")"
 for name in HOOKBUS_USER_ID HOOKBUS_ACCOUNT_ID HOOKBUS_INSTANCE_ID HOOKBUS_HOST_ID; do
   value="${!name:-}"
   if [ -n "$value" ]; then
-    HOOK_CMD="$HOOK_CMD $name=$value"
+    HOOK_CMD="$HOOK_CMD $name=$(shell_quote "$value")"
   fi
 done
-HOOK_CMD="$HOOK_CMD $DST"
+HOOK_CMD="$HOOK_CMD $(shell_quote "$DST")"
 
 if [ -f "$CONFIG" ]; then
   cp "$CONFIG" "$CONFIG.bak.hookbus-$(date +%Y%m%d-%H%M%S)"
@@ -146,5 +157,9 @@ cat <<EOF
 Codex HookBus publisher installed.
 
 Restart Codex so config and hooks are reloaded.
-If you used YOUR_TOKEN_HERE, edit $HOOKS and replace it with your HookBus token.
+Run a verification check:
+
+  $DST --doctor
+
+If your bus requires authentication, rerun the installer with HOOKBUS_TOKEN set.
 EOF
