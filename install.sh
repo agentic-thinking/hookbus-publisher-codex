@@ -97,6 +97,9 @@ if not isinstance(root, dict):
     raise SystemExit("hooks.json hooks field must be an object")
 
 for event in events:
+    data.pop(event, None)
+
+for event in events:
     entries = root.get(event)
     if not isinstance(entries, list):
         entries = []
