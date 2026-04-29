@@ -49,6 +49,17 @@ PY
 [ -f "$SRC" ] || die "missing $SRC"
 command -v node >/dev/null || die "node is required"
 
+load_hookbus_env() {
+  if [[ -z "${HOOKBUS_TOKEN:-}" && -f "$HOME/hookbus-light/.env" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$HOME/hookbus-light/.env"
+    set +a
+  fi
+}
+
+load_hookbus_env
+
 mkdir -p "$BIN_DIR" "$CODEX_DIR"
 install -Dm755 "$SRC" "$DST"
 say "installed $DST"

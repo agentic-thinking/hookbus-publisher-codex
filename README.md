@@ -21,7 +21,9 @@ For a local development bus, install HookBus Light first and load its environmen
 
 ```bash
 curl -fsSL https://hookbus.com/install.sh | bash
+set -a
 source ~/hookbus-light/.env
+set +a
 export HOOKBUS_URL=http://localhost:18800/event
 ```
 
